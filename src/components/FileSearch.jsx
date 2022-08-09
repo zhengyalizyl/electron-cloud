@@ -12,7 +12,8 @@ const FileSearch = ({ title, onFileSearch }) => {
     const node = useRef(null)
     const closeSearch = () => {
         setInputActive(false);
-        setValue('')
+        setValue('');
+        onFileSearch('')
     }
 
 
