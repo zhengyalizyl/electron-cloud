@@ -10,7 +10,8 @@ import BottomBtn from './components/BottomBtn';
 import TabList from './components/TabList';
 import SimpleMDE from 'react-simplemde-editor';
 import 'easymde/dist/easymde.min.css';
-import react, { useState } from 'react'
+import react, { useState } from 'react';
+import { v4 as uuidv4 } from 'uuid';
 
 function App() {
 
@@ -18,23 +19,25 @@ function App() {
   const [activeFileID, setActiveFileID] = useState('');
   const [openFileIDs, setOpenFileIDs] = useState([]);
   const [unsavedFileIDs, setUnsavedFileIDs] = useState([]);
+  const [searchFiles, setSearchFiles] = useState([]);
+
   const openedFiles = openFileIDs.map(openID => {
     return files.find(file => file.id === openID)
   })
 
   const activeFile = files.find(file => file.id === activeFileID)
-  const handleChange = (id,value) => {
-     const newFiles=files.map(file=>{
-      if(file.id===id){
-        file.body=value
+  const handleChange = (id, value) => {
+    const newFiles = files.map(file => {
+      if (file.id === id) {
+        file.body = value
       }
       return file
-     })
+    })
 
-     setFiles(newFiles);
-     if(!unsavedFileIDs.includes(id)){
-      setUnsavedFileIDs([...unsavedFileIDs,id])
-     }
+    setFiles(newFiles);
+    if (!unsavedFileIDs.includes(id)) {
+      setUnsavedFileIDs([...unsavedFileIDs, id])
+    }
   };
   const fileClick = (fileID) => {
     setActiveFileID(fileID);
@@ -56,19 +59,56 @@ function App() {
       setActiveFileID('')
     }
   }
+
+  const deleteFile = (id) => {
+    const newFiles = files.filter(file => file.id !== id);
+    setFiles(newFiles);
+    tabClose(id)
+  }
+  const updateFileName = (id, title) => {
+    const newFiles = files.map(file => {
+      if (file.id === id) {
+        file.title = title;
+        file.isNew=false;
+      }
+      return file
+    })
+    setFiles(newFiles);
+  }
+
+  const fileSearch = (keyword) => {
+    const newFiles = files.filter(file => file.title.includes(keyword));
+    setSearchFiles(newFiles)
+  }
+
+  const fileListArr = (searchFiles.length > 0) ? searchFiles : files;
+
+  const createNewFile = () => {
+    const newFiles = [...files,
+    { 
+      id: uuidv4(), 
+      title: '', 
+      body: '##请输入内容',
+      createdAt:new Date().getTime(),
+      isNew:true
+     }]
+     setFiles(newFiles)
+     console.log(newFiles)
+  }
+
   return (
     <div className="App container-fluid px-0">
       <div className='row no-gutters'>
         <div className="col-3 bg-danger left-panel">
           <FileSearch
             title="我的云文档"
-            onFileSearch={() => { }}
+            onFileSearch={(keyword) => fileSearch(keyword)}
           ></FileSearch>
           <FileList
-            files={files}
+            files={fileListArr}
             onFileClick={(id) => fileClick(id)}
-            onFileDelete={(id) => { }}
-            onSaveEdit={(id, newValue) => { }}
+            onFileDelete={(id) => deleteFile(id)}
+            onSaveEdit={(id, newValue) => updateFileName(id, newValue)}
           />
           <div className="row no-gutters button-group">
             <div className="col">
@@ -76,6 +116,7 @@ function App() {
                 text="新建"
                 colorClass="btn-primary no-border"
                 icon={faPlus}
+                onBtnClick={createNewFile}
               >
               </BottomBtn>
             </div>
@@ -133,7 +174,7 @@ function App() {
                     'guide'
                   ]
                 }}
-                onChange={(value)=>handleChange(activeFile.id,value)}
+                onChange={(value) => handleChange(activeFile.id, value)}
               />
             </>)
           }
