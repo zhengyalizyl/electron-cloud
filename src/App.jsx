@@ -1,7 +1,7 @@
 import logo from './logo.svg';
 import './App.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faFileImport, faPlus } from '@fortawesome/free-solid-svg-icons'
+import { faFileImport, faPlus, faSave } from '@fortawesome/free-solid-svg-icons'
 import 'bootstrap/dist/css/bootstrap.min.css'
 import FileSearch from './components/FileSearch';
 import FileList from './components/FileList';
@@ -12,16 +12,28 @@ import SimpleMDE from 'react-simplemde-editor';
 import 'easymde/dist/easymde.min.css';
 import react, { useCallback, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { flatternArr, objToArr } from './utils/helper'
+import { flatternArr, objToArr } from './utils/helper';
+import fileHelper from './utils/fileHelper';
+
+const shareObject = window.require('@electron/remote').getGlobal("shareObject")
+const isDev = shareObject.isDev
+const currentVersion = shareObject.currentVersion;
+
+//require nodejs modules
+const { join } = window.require('path');
+const { app } = window.require('@electron/remote'); //electron 14之后改了
+
+const Store=window.require('electron-store');
+const store=new Store();
 
 function App() {
-
   const [files, setFiles] = useState(flatternArr(defaultFiles));
   const filesArr = objToArr(files);
   const [activeFileID, setActiveFileID] = useState('');
   const [openFileIDs, setOpenFileIDs] = useState([]);
   const [unsavedFileIDs, setUnsavedFileIDs] = useState([]);
   const [searchFiles, setSearchFiles] = useState([]);
+  const savedLocation = app.getPath('documents');
 
   const openedFiles = openFileIDs.map(openID => {
     return files[openID]
@@ -29,12 +41,12 @@ function App() {
 
   const activeFile = files[activeFileID];
   const handleChange = (id, value) => {
-    const newFile= {
+    const newFile = {
       ...files[id],
-      body:value
+      body: value
     }
 
-    setFiles({...files,[id]:newFile});
+    setFiles({ ...files, [id]: newFile });
     if (!unsavedFileIDs.includes(id)) {
       setUnsavedFileIDs([...unsavedFileIDs, id])
     }
@@ -65,13 +77,24 @@ function App() {
     setFiles(files);
     tabClose(id)
   }
-  const updateFileName = (id, title) => {
-    const newFile= {
+  const updateFileName = (id, title, isNew) => {
+    const newFile = {
       ...files[id],
-      title:title,
-      isNew : false,
+      title: title,
+      isNew: false,
     }
-    setFiles({...files,[id]:newFile});
+    if (isNew) {
+      fileHelper.writeFile(join(savedLocation, `${title}.md`), files[id].body).then(res => {
+        setFiles({ ...files, [id]: newFile });
+      }).catch(err => {
+        console.dir(err)
+      })
+    } else {
+      fileHelper.renameFile(join(savedLocation, `${files[id].title}.md`), join(savedLocation, `${title}.md`)).then(res => {
+        setFiles({ ...files, [id]: newFile });
+      })
+    }
+
   }
 
   const fileSearch = (keyword) => {
@@ -80,9 +103,9 @@ function App() {
     setSearchFiles(newFiles)
   }
 
-  
+
   const createNewFile = () => {
-    const newId=uuidv4();
+    const newId = uuidv4();
     const newFile =
     {
       id: newId,
@@ -91,10 +114,14 @@ function App() {
       createdAt: new Date().getTime(),
       isNew: true
     }
-    setFiles({...files,[newId]:newFile})
+    setFiles({ ...files, [newId]: newFile })
   }
   const fileListArr = searchFiles.length > 0 ? searchFiles : filesArr;
-
+  const onSave = () => {
+    fileHelper.writeFile(join(savedLocation,`${activeFile.title}.md`),activeFile.body).then(res=>{
+      setUnsavedFileIDs(unsavedFileIDs.filter(id=>id!=activeFileID))
+    })
+  }
   return (
     <div className="App container-fluid px-0">
       <div className='row no-gutters'>
@@ -107,7 +134,7 @@ function App() {
             files={fileListArr}
             onFileClick={(id) => fileClick(id)}
             onFileDelete={(id) => deleteFile(id)}
-            onSaveEdit={(id, newValue) => updateFileName(id, newValue)}
+            onSaveEdit={(id, newValue, isNew) => updateFileName(id, newValue, isNew)}
           />
           <div className="row no-gutters button-group">
             <div className="col">
@@ -175,6 +202,13 @@ function App() {
                 }}
                 onChange={(value) => handleChange(activeFile.id, value)}
               />
+              <BottomBtn
+                text="baocun"
+                colorClass="btn-success no-border"
+                icon={faSave}
+                onBtnClick={onSave}
+              >
+              </BottomBtn>
             </>)
           }
 
