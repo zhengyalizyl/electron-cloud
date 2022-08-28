@@ -3,29 +3,48 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faEdit, faTrash, faTimes } from '@fortawesome/free-solid-svg-icons'
 import { faMarkdown } from '@fortawesome/free-brands-svg-icons'
 import useKeyPress from '../hooks/useKeyPress';
+import {useContextMenu} from '../utils/useContextMenu'
 
 const FileList = ({ files, onFileClick, onSaveEdit, onFileDelete }) => {
     const [editStatus, setEditStatus] = useState(false);
     const [value, setValue] = useState('');
     const enterPressed = useKeyPress(13);
     const escPressed = useKeyPress(27);
+
+    useContextMenu([{
+        label: '打开',
+        click: () => {
+            console.log('clicking')
+        }
+    }, {
+        label: '重命名',
+        click: () => {
+            console.log('renaming')
+        }
+    }, {
+        label: '删除',
+        click: () => {
+            console.log('clicking delete')
+        }
+    }])
+
     const closeSearch = (editItem) => {
         setEditStatus(false);
         setValue('');
-        if(editItem.isNew){
+        if (editItem.isNew) {
             onFileDelete(editItem.id)
         }
     }
     useEffect(() => {
-            const editItem = files.find(file => file.id === editStatus);
-            if (enterPressed && editStatus&&value.trim()!='') {
-                onSaveEdit(editItem.id, value,editItem.isNew);
-                setEditStatus(false);
-                setValue('')
-            } else if (escPressed && editStatus) {
-                closeSearch(editItem)
-            }
-      
+        const editItem = files.find(file => file.id === editStatus);
+        if (enterPressed && editStatus && value.trim() != '') {
+            onSaveEdit(editItem.id, value, editItem.isNew);
+            setEditStatus(false);
+            setValue('')
+        } else if (escPressed && editStatus) {
+            closeSearch(editItem)
+        }
+
     })
 
     useEffect(() => {

@@ -20,14 +20,30 @@ const isDev = shareObject.isDev
 const currentVersion = shareObject.currentVersion;
 
 //require nodejs modules
-const { join } = window.require('path');
-const { app } = window.require('@electron/remote'); //electron 14之后改了
+const { join,basename,extname,dirname } = window.require('path');
+const { app, dialog } = window.require('@electron/remote'); //electron 14之后改了
 
-const Store=window.require('electron-store');
-const store=new Store();
+const Store = window.require('electron-store');
+const fileStore = new Store({ "name": 'Files Data' });
+
+const saveFilesToStore = (files) => {
+  //we do not have to store any info in file system,eg:isnew,body,etc
+  const filesStoreObj = objToArr(files).reduce((result, file) => {
+    const { id, path, title, createdAt } = file;
+    result[id] = {
+      id,
+      path,
+      title,
+      createdAt
+    }
+    return result;
+  }, {});
+
+  fileStore.set('files', filesStoreObj);
+}
 
 function App() {
-  const [files, setFiles] = useState(flatternArr(defaultFiles));
+  const [files, setFiles] = useState(fileStore.get('files') || {});
   const filesArr = objToArr(files);
   const [activeFileID, setActiveFileID] = useState('');
   const [openFileIDs, setOpenFileIDs] = useState([]);
@@ -53,6 +69,14 @@ function App() {
   };
   const fileClick = (fileID) => {
     setActiveFileID(fileID);
+    const currentFile = files[fileID];
+    if (!currentFile.isLoaded) {
+      fileHelper.readFile(currentFile.path).then(value => {
+        const newFile = { ...files[fileID], body: value, isLoaded: true };
+        setFiles({ ...files, [fileID]: newFile })
+      })
+    }
+
     if (!openFileIDs.includes(fileID)) {
       setOpenFileIDs([...openFileIDs, fileID])
     }
@@ -73,32 +97,46 @@ function App() {
   }
 
   const deleteFile = (id) => {
-    delete files[id]
-    setFiles(files);
-    tabClose(id)
+    if (files[id].isNew) {
+      delete files[id]
+      setFiles({ ...files });
+    } else {
+      fileHelper.deleteFile(files[id].path).then(files[id].path).then(() => {
+        delete files[id]
+        setFiles({ ...files });
+        tabClose(id);
+        saveFilesToStore()
+      })
+    }
+
   }
   const updateFileName = (id, title, isNew) => {
+    const newpath = isNew?join(savedLocation, `${title}.md`):join(dirname(files[id].path),`${title}.md`)
     const newFile = {
       ...files[id],
       title: title,
       isNew: false,
+      path: newpath
     }
+    const newFiles = { ...files, [id]: newFile };
     if (isNew) {
-      fileHelper.writeFile(join(savedLocation, `${title}.md`), files[id].body).then(res => {
-        setFiles({ ...files, [id]: newFile });
+      fileHelper.writeFile(newpath, files[id].body).then(res => {
+        setFiles(newFiles);
+        saveFilesToStore(newFiles);
       }).catch(err => {
         console.dir(err)
       })
     } else {
-      fileHelper.renameFile(join(savedLocation, `${files[id].title}.md`), join(savedLocation, `${title}.md`)).then(res => {
+      const oldPath = files[id].path;
+      fileHelper.renameFile(oldPath, newpath).then(res => {
         setFiles({ ...files, [id]: newFile });
+        saveFilesToStore(newFiles)
       })
     }
 
   }
 
   const fileSearch = (keyword) => {
-
     const newFiles = filesArr.filter(file => file.title.includes(keyword));
     setSearchFiles(newFiles)
   }
@@ -118,8 +156,59 @@ function App() {
   }
   const fileListArr = searchFiles.length > 0 ? searchFiles : filesArr;
   const onSave = () => {
-    fileHelper.writeFile(join(savedLocation,`${activeFile.title}.md`),activeFile.body).then(res=>{
-      setUnsavedFileIDs(unsavedFileIDs.filter(id=>id!=activeFileID))
+
+    fileHelper.writeFile(activeFile.path, activeFile.body).then(res => {
+      setUnsavedFileIDs(unsavedFileIDs.filter(id => id !== activeFileID))
+    })
+  }
+
+  const importFile = () => {
+    dialog.showOpenDialog({
+      title: '选择导入的MarkDown文件',
+      properties: ['openFile', 'multiSelection'],
+      filters: [
+        { name: 'markdown files', extensions: ['md'] },
+      ]
+    }).then(res => {
+      const {filePaths} =res;
+      if (Array.isArray(filePaths)) {
+        //filter out the path we already have in electorn store
+        //1.[/Volumes/F/前端笔试题.md]
+        const filteredPaths= filePaths.filter(path=>{
+          const alreadyAdded=Object.values(files).find(file=>{
+            return file.path===path
+          })
+          return !alreadyAdded
+        })
+
+        console.log(filteredPaths)
+         
+        // extend the path array to an array contains files info
+        // [{id:'1',path:'',title:'}]
+        const importFilesArr= filteredPaths.map(path=>{
+          return {
+            id:uuidv4(),
+            title:basename(path,extname(path)),
+            path,
+          }
+        })
+
+        //get the new files object in flatternArr
+        console.log(files)
+      const newFiles={...files,...flatternArr(importFilesArr)};
+        //setState and update electron store
+
+        setFiles(newFiles);
+        saveFilesToStore(newFiles);
+        if(importFilesArr.length>0){
+          dialog.showMessageBox({
+            type:'info',
+            title:`成功导入了${importFilesArr.length}个文件`,
+            message:`成功导入了${importFilesArr.length}个文件`
+          })
+        }
+      }
+
     })
   }
   return (
@@ -151,6 +240,7 @@ function App() {
                 text="导入"
                 colorClass="btn-success no-border"
                 icon={faFileImport}
+                onBtnClick={importFile}
               >
               </BottomBtn>
             </div>
