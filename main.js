@@ -37,13 +37,16 @@ app.on('ready', () => {
             parent: mainWindow
         }
         const settingsFileLocation = `file://${path.join(__dirname,'./settings/settings.html')}`
-        settingsWindow = new AppWindow(settingsWindowConfig, settingsFileLocation)
+        settingsWindow = new AppWindow(settingsWindowConfig, settingsFileLocation);
+        settingsWindow.removeMenu();
+        settingsWindow.on('closed', () => {
+            settingsWindow = null;
+        })
     })
 
     const menu = Menu.buildFromTemplate(menuTemplate)
     Menu.setApplicationMenu(menu)
     mainWindow.on('closed', () => {
         mainWindow = null;
-        settingsWindow = null;
     })
 })

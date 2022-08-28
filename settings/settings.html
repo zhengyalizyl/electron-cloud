@@ -9,27 +9,71 @@
     <link rel="stylesheet" href="https://cdn.staticfile.org/twitter-bootstrap/3.3.7/css/bootstrap.min.css">
     <script src="https://cdn.staticfile.org/jquery/2.1.1/jquery.min.js"></script>
     <script src="https://cdn.staticfile.org/twitter-bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <style>
+        .config-area {
+            display: none;
+        }
+        
+        .config-area:nth-child(2) {
+            display: block;
+        }
+    </style>
 </head>
 
 <body>
-    <div>
+    <div class="container mt-4">
         <h5>设置</h5>
         <form class="form-horizontal" role="form" id="settings-form">
-            <div class="form-group">
-                <label class="sr-only" for="saved-file-location">选择文件存储位置</label>
-                <div class="input-group mb-2">
-                    <input type="text" id="saved-file-location" placeholder="当前存储地址">
-                    <div class="input-group-append">
-                        <button class="btn btn-outline-primary" type="button" id="select-new-location">选择新的位置</button>
+            <ul class="nav nav-tabs">
+                <li class="nav-item">
+                    <a href="#" class="nav-link active" data-tab="#config-file-location">文件存储位置</a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-tab="#qiniu-sync-params">七牛云同步</a>
+                </li>
+            </ul>
+            <div id="config-file-location" class="config-area mt-4">
+                <div class="form-group">
+                    <label class="sr-only" for="savedFileLocation">选择文件存储位置</label>
+                    <div class="input-group mb-2">
+                        <input type="text" id="savedFileLocation" placeholder="当前存储地址">
+                        <div class="input-group-append">
+                            <button class="btn btn-outline-primary" type="button" id="select-new-location">选择新的位置</button>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+            <div id="qiniu-sync-params" class="config-area mt-4">
+                <div class="form-group row">
+                    <label for="accessKey" class="col-3 col-form-label">Access Key</label>
+                    <div class="col-9">
+                        <input type="text" class="form-control" id="accessKey" placeholder="Access Key">
+                        <small id="acHelp" class="form-text text-muted">请在七牛云密钥管理下查看</small>
+                    </div>
+                </div>
+                <div class="form-group row">
+                    <label for="secretKey" class="col-3 col-form-label">Secret Key</label>
+                    <div class="col-9">
+                        <input type="text" class="form-control" id="secretKey" placeholder="Secret Key">
+                        <small id="acHelp" class="form-text text-muted">请在七牛云密钥管理下查看</small>
+                    </div>
+                </div>
+                <div class="form-group row">
+                    <label for="bucketkey" class="col-3 col-form-label">Bucket名称</label>
+                    <div class="col-9">
+                        <input type="text" class="form-control" id="bucketkey" placeholder="请输入Bucket名称">
                     </div>
                 </div>
 
             </div>
             <button type="submit" class="btn btn-primary">保存</button>
         </form>
+
     </div>
     <script>
-        require('./settings.js')
+        // require('./settings.js')
     </script>
 </body>
 
