@@ -3,7 +3,8 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faEdit, faTrash, faTimes } from '@fortawesome/free-solid-svg-icons'
 import { faMarkdown } from '@fortawesome/free-brands-svg-icons'
 import useKeyPress from '../hooks/useKeyPress';
-import {useContextMenu} from '../utils/useContextMenu'
+import { useContextMenu } from '../utils/useContextMenu'
+import { getParentNode } from '../utils/helper'
 
 const FileList = ({ files, onFileClick, onSaveEdit, onFileDelete }) => {
     const [editStatus, setEditStatus] = useState(false);
@@ -11,22 +12,33 @@ const FileList = ({ files, onFileClick, onSaveEdit, onFileDelete }) => {
     const enterPressed = useKeyPress(13);
     const escPressed = useKeyPress(27);
 
-    useContextMenu([{
+    const clickedItem = useContextMenu([{
         label: '打开',
         click: () => {
-            console.log('clicking')
+            const parentElement = getParentNode(clickedItem.current, 'file-item');
+            if(parentElement){
+                onFileClick(parentElement.dataset.id)
+            }
         }
     }, {
         label: '重命名',
         click: () => {
             console.log('renaming')
+            const parentElement = getParentNode(clickedItem.current, 'file-item');
+            if(parentElement){
+               onSaveEdit(parentElement.dataset.id)
+            }
         }
     }, {
         label: '删除',
         click: () => {
             console.log('clicking delete')
+            const parentElement = getParentNode(clickedItem.current, 'file-item');
+            if(parentElement){
+                onFileDelete(parentElement.dataset.id)
+            }
         }
-    }])
+    }], '.file-list',[files])
 
     const closeSearch = (editItem) => {
         setEditStatus(false);
@@ -61,6 +73,8 @@ const FileList = ({ files, onFileClick, onSaveEdit, onFileDelete }) => {
                 files.map(file => (
                     <li
                         key={file.id}
+                        data-id={file.id}
+                        data-title={file.title}
                         className="list-group-item bg-light d-flex row align-items-center file-item  mx-0"
                     >
                         {

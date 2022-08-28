@@ -14,6 +14,7 @@ import react, { useCallback, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { flatternArr, objToArr } from './utils/helper';
 import fileHelper from './utils/fileHelper';
+import useIpcRenderer from './utils/useIpcRenderer';
 
 const shareObject = window.require('@electron/remote').getGlobal("shareObject")
 const isDev = shareObject.isDev
@@ -21,10 +22,11 @@ const currentVersion = shareObject.currentVersion;
 
 //require nodejs modules
 const { join,basename,extname,dirname } = window.require('path');
-const { app, dialog } = window.require('@electron/remote'); //electron 14之后改了
+const { app, dialog,ipcRenderer } = window.require('@electron/remote'); //electron 14之后改了
 
 const Store = window.require('electron-store');
 const fileStore = new Store({ "name": 'Files Data' });
+const settingsStore = new Store({ "name": 'settings' });
 
 const saveFilesToStore = (files) => {
   //we do not have to store any info in file system,eg:isnew,body,etc
@@ -49,23 +51,38 @@ function App() {
   const [openFileIDs, setOpenFileIDs] = useState([]);
   const [unsavedFileIDs, setUnsavedFileIDs] = useState([]);
   const [searchFiles, setSearchFiles] = useState([]);
-  const savedLocation = app.getPath('documents');
+  const savedLocation = settingsStore.get('savedFileLocation')||app.getPath('documents');
 
   const openedFiles = openFileIDs.map(openID => {
     return files[openID]
   })
 
+  // useEffect(()=>{
+  //   const callback=()=>{
+  //     console.log('hello from menu')
+  //   }
+  //   ipcRenderer.on('create-new-file',callback);
+  //   return ()=>{
+  //     ipcRenderer.removeEventListener('create-new-file',callback)
+  //   }
+  // },[])
+
+
   const activeFile = files[activeFileID];
   const handleChange = (id, value) => {
-    const newFile = {
-      ...files[id],
-      body: value
-    }
 
-    setFiles({ ...files, [id]: newFile });
-    if (!unsavedFileIDs.includes(id)) {
-      setUnsavedFileIDs([...unsavedFileIDs, id])
+    if(value!==files[id].body){
+      const newFile = {
+        ...files[id],
+        body: value
+      }
+  
+      setFiles({ ...files, [id]: newFile });
+      if (!unsavedFileIDs.includes(id)) {
+        setUnsavedFileIDs([...unsavedFileIDs, id])
+      }
     }
+  
   };
   const fileClick = (fileID) => {
     setActiveFileID(fileID);
@@ -211,6 +228,13 @@ function App() {
 
     })
   }
+
+  useIpcRenderer({
+    'create-new-file':createNewFile,
+    'import-file':importFile,
+    'save-edit-file':onSave,
+  })
+
   return (
     <div className="App container-fluid px-0">
       <div className='row no-gutters'>
@@ -292,13 +316,13 @@ function App() {
                 }}
                 onChange={(value) => handleChange(activeFile.id, value)}
               />
-              <BottomBtn
+              {/* <BottomBtn
                 text="baocun"
                 colorClass="btn-success no-border"
                 icon={faSave}
                 onBtnClick={onSave}
               >
-              </BottomBtn>
+              </BottomBtn> */}
             </>)
           }
 
