@@ -67,6 +67,13 @@ class QiniuManager {
         })
     }
 
+
+    getStat(key) {
+        return new Promise((resolve, reject) => {
+
+        })
+    }
+
     generateDownloadLink(key) {
         const domainPromise = this.publicBucketDomain ? Promise.resolve([this.publicBucketDomain]) : this.getBucketDomain();
         return domainPromise.then(data => {

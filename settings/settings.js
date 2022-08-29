@@ -1,9 +1,10 @@
-const { app, dialog, ipcRenderer, getCurrentWindow } = window.require('@electron/remote'); //electron 14之后改了
+const { app, dialog, getCurrentWindow } = window.require('@electron/remote'); //electron 14之后改了
+const { ipcRenderer } = window.require('electron')
 const Store = window.require('electron-store');
 const settingsStore = new Store({ "name": 'settings' });
 const qiniuConfigArr = ["#savedFileLocation", "#accessKey", "#secretKey", "#bucketkey"]
 
-const $ = (id) => {
+const $ = (selector) => {
     const result = document.querySelectorAll(selector);
     return result.length > 1 ? result : result[0]
 }
@@ -26,13 +27,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const { filePaths } = res;
             console.log(filePaths)
             if (Array.isArray(filePaths)) {
-                $('#savedFileLocation').value = path[0];
-                saveLocation = path[0]
+                $('#savedFileLocation').value = filePaths[0];
+                saveLocation = filePaths[0]
             }
 
         })
     })
-    $('#settings-form').addEventListener('submit', () => {
+    $('#settings-form').addEventListener('submit', (e) => {
         e.preventDefault();
         qiniuConfigArr.forEach(selector => {
                 if ($(selector)) {
@@ -41,6 +42,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             })
             // settingsStore.set('savedFileLocation', saveLocation);
+            //sent a event back to main process to  enable menu items if qiniu is configed
+        ipcRenderer.send('config-is-saved')
         getCurrentWindow().close();
     })
     $('.nav-tabs').addEventListener('click', (e) => {

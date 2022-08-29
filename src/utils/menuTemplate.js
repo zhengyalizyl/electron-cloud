@@ -1,8 +1,11 @@
 const { app, Menu } = require('electron')
-const { ipcMain } = require('electron/main')
+const { ipcMain } = require('electron/main');
+const Store = require('electron-store');
+const settingsStore = new Store({ name: 'Settings' })
+const isMac = process.platform === 'darwin';
 
-const isMac = process.platform === 'darwin'
-
+const isQiniuConfiged = ["accessKey", "secretKey", "bucketkey"].every(key => !!settingsStore.get(key));
+let enableAutoSync = settingsStore.get('enableAutoSync');
 const menuTemplate = [
     // { role: 'appMenu' }
     ...(isMac ? [{
@@ -17,6 +20,7 @@ const menuTemplate = [
                     ipcMain.emit('open-settings-window')
                 }
             },
+
             { role: 'services' },
             { type: 'separator' },
             { role: 'hide' },
@@ -100,6 +104,41 @@ const menuTemplate = [
         ]
     },
     // { role: 'viewMenu' }
+    {
+        label: '云同步',
+        submenu: [{
+                label: '设置',
+                accelerator: 'CmdOrCtrl+,',
+                click: () => {
+                    ipcMain.emit('open-settings-window')
+                }
+            },
+            {
+                label: '自动同步',
+                type: 'checkbox',
+                enabled: isQiniuConfiged,
+                checked: enableAutoSync,
+                click: () => {
+                    settingsStore.set('enableAutoSync', !enableAutoSync)
+                }
+            },
+            {
+                label: '全部同步至云端',
+                enabled: isQiniuConfiged,
+                click: () => {
+
+                }
+            },
+            {
+                label: '从云端下载到本地',
+                enabled: isQiniuConfiged,
+                click: () => {
+
+                }
+            }
+
+        ]
+    },
     {
         label: 'View',
         submenu: [

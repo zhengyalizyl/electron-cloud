@@ -12,7 +12,7 @@ import SimpleMDE from 'react-simplemde-editor';
 import 'easymde/dist/easymde.min.css';
 import react, { useCallback, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { flatternArr, objToArr } from './utils/helper';
+import { flatternArr, objToArr, timeStampToString } from './utils/helper';
 import fileHelper from './utils/fileHelper';
 import useIpcRenderer from './utils/useIpcRenderer';
 
@@ -21,22 +21,25 @@ const isDev = shareObject.isDev
 const currentVersion = shareObject.currentVersion;
 
 //require nodejs modules
-const { join,basename,extname,dirname } = window.require('path');
-const { app, dialog,ipcRenderer } = window.require('@electron/remote'); //electron 14之后改了
+const { join, basename, extname, dirname } = window.require('path');
+const { app, dialog, ipcRenderer } = window.require('@electron/remote'); //electron 14之后改了
 
 const Store = window.require('electron-store');
 const fileStore = new Store({ "name": 'Files Data' });
 const settingsStore = new Store({ "name": 'settings' });
+const getAutoSync = ["accessKey", "secretKey", "bucketkey", "enableAutoSync"].every(key => !!settingsStore.get(key));
 
 const saveFilesToStore = (files) => {
   //we do not have to store any info in file system,eg:isnew,body,etc
   const filesStoreObj = objToArr(files).reduce((result, file) => {
-    const { id, path, title, createdAt } = file;
+    const { id, path, title, createdAt, isSynced, updateAt } = file;
     result[id] = {
       id,
       path,
       title,
-      createdAt
+      createdAt,
+      isSynced,
+      updateAt
     }
     return result;
   }, {});
@@ -51,7 +54,7 @@ function App() {
   const [openFileIDs, setOpenFileIDs] = useState([]);
   const [unsavedFileIDs, setUnsavedFileIDs] = useState([]);
   const [searchFiles, setSearchFiles] = useState([]);
-  const savedLocation = settingsStore.get('savedFileLocation')||app.getPath('documents');
+  const savedLocation = settingsStore.get('savedFileLocation') || app.getPath('documents');
 
   const openedFiles = openFileIDs.map(openID => {
     return files[openID]
@@ -71,27 +74,36 @@ function App() {
   const activeFile = files[activeFileID];
   const handleChange = (id, value) => {
 
-    if(value!==files[id].body){
+    if (value !== files[id].body) {
       const newFile = {
         ...files[id],
         body: value
       }
-  
+
       setFiles({ ...files, [id]: newFile });
       if (!unsavedFileIDs.includes(id)) {
         setUnsavedFileIDs([...unsavedFileIDs, id])
       }
     }
-  
+
   };
   const fileClick = (fileID) => {
     setActiveFileID(fileID);
     const currentFile = files[fileID];
-    if (!currentFile.isLoaded) {
-      fileHelper.readFile(currentFile.path).then(value => {
-        const newFile = { ...files[fileID], body: value, isLoaded: true };
-        setFiles({ ...files, [fileID]: newFile })
-      })
+    const { isLoaded, id, title, path } = currentFile;
+    if (!isLoaded) {
+      if (getAutoSync()) {
+        ipcRenderer.send('download-file', {
+          key: `${title}.md`,
+          path,
+          id
+        })
+      } else {
+        fileHelper.readFile(path).then(value => {
+          const newFile = { ...files[fileID], body: value, isLoaded: true };
+          setFiles({ ...files, [fileID]: newFile })
+        })
+      }
     }
 
     if (!openFileIDs.includes(fileID)) {
@@ -128,7 +140,7 @@ function App() {
 
   }
   const updateFileName = (id, title, isNew) => {
-    const newpath = isNew?join(savedLocation, `${title}.md`):join(dirname(files[id].path),`${title}.md`)
+    const newpath = isNew ? join(savedLocation, `${title}.md`) : join(dirname(files[id].path), `${title}.md`)
     const newFile = {
       ...files[id],
       title: title,
@@ -173,9 +185,17 @@ function App() {
   }
   const fileListArr = searchFiles.length > 0 ? searchFiles : filesArr;
   const onSave = () => {
+    const { path, body, title } = activeFile;
 
-    fileHelper.writeFile(activeFile.path, activeFile.body).then(res => {
+    fileHelper.writeFile(path, body).then(res => {
+
       setUnsavedFileIDs(unsavedFileIDs.filter(id => id !== activeFileID))
+      if (getAutoSync()) {
+        ipcRenderer.send('upload-file', {
+          key: `${title}.md`,
+          path
+        })
+      }
     })
   }
 
@@ -187,41 +207,41 @@ function App() {
         { name: 'markdown files', extensions: ['md'] },
       ]
     }).then(res => {
-      const {filePaths} =res;
+      const { filePaths } = res;
       if (Array.isArray(filePaths)) {
         //filter out the path we already have in electorn store
         //1.[/Volumes/F/前端笔试题.md]
-        const filteredPaths= filePaths.filter(path=>{
-          const alreadyAdded=Object.values(files).find(file=>{
-            return file.path===path
+        const filteredPaths = filePaths.filter(path => {
+          const alreadyAdded = Object.values(files).find(file => {
+            return file.path === path
           })
           return !alreadyAdded
         })
 
         console.log(filteredPaths)
-         
+
         // extend the path array to an array contains files info
         // [{id:'1',path:'',title:'}]
-        const importFilesArr= filteredPaths.map(path=>{
+        const importFilesArr = filteredPaths.map(path => {
           return {
-            id:uuidv4(),
-            title:basename(path,extname(path)),
+            id: uuidv4(),
+            title: basename(path, extname(path)),
             path,
           }
         })
 
         //get the new files object in flatternArr
         console.log(files)
-      const newFiles={...files,...flatternArr(importFilesArr)};
+        const newFiles = { ...files, ...flatternArr(importFilesArr) };
         //setState and update electron store
 
         setFiles(newFiles);
         saveFilesToStore(newFiles);
-        if(importFilesArr.length>0){
+        if (importFilesArr.length > 0) {
           dialog.showMessageBox({
-            type:'info',
-            title:`成功导入了${importFilesArr.length}个文件`,
-            message:`成功导入了${importFilesArr.length}个文件`
+            type: 'info',
+            title: `成功导入了${importFilesArr.length}个文件`,
+            message: `成功导入了${importFilesArr.length}个文件`
           })
         }
       }
@@ -229,10 +249,19 @@ function App() {
     })
   }
 
+  const activeFileUploaded = () => {
+    const { id } = activeFile;
+    const modifiedFile = { ...files[id], isSynced: true, updateAt: new Date().getTime() };
+    const newFiles = { ...files, [id]: modifiedFile };
+    setFiles(newFiles);
+    saveFilesToStore(newFiles);
+  }
+
   useIpcRenderer({
-    'create-new-file':createNewFile,
-    'import-file':importFile,
-    'save-edit-file':onSave,
+    'create-new-file': createNewFile,
+    'import-file': importFile,
+    'save-edit-file': onSave,
+    'active-file-uploaded': activeFileUploaded
   })
 
   return (
@@ -316,6 +345,9 @@ function App() {
                 }}
                 onChange={(value) => handleChange(activeFile.id, value)}
               />
+              {activeFile.isSynced && (<>
+                <span className='sync-status'>已同步，上次同步时间{timeStampToString(activeFile.updateAt)}</span>
+              </>)}
               {/* <BottomBtn
                 text="baocun"
                 colorClass="btn-success no-border"
