@@ -15,6 +15,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { flatternArr, objToArr, timeStampToString } from './utils/helper';
 import fileHelper from './utils/fileHelper';
 import useIpcRenderer from './utils/useIpcRenderer';
+import Loader from './components/Loader';
 
 const shareObject = window.require('@electron/remote').getGlobal("shareObject")
 const isDev = shareObject.isDev
@@ -55,6 +56,7 @@ function App() {
   const [unsavedFileIDs, setUnsavedFileIDs] = useState([]);
   const [searchFiles, setSearchFiles] = useState([]);
   const savedLocation = settingsStore.get('savedFileLocation') || app.getPath('documents');
+  const [isLoading,setIsLoading]=useState(false)
 
   const openedFiles = openFileIDs.map(openID => {
     return files[openID]
@@ -257,15 +259,52 @@ function App() {
     saveFilesToStore(newFiles);
   }
 
+  const activeFileDownloaded=(event,message)=>{
+    const currentFile=files[message.id];
+    const {id,path}=currentFile;
+    fileHelper.readFile(path).then(value=>{
+      let newFile;
+      if(message.status==='download-success'){
+        newFile={...files[id],body:value,isLoaded:true,isSynced:true,updateAt:new Date().getTime()}
+      }else{
+        newFile={...files[id],body:value,isLoaded:true}
+      }
+      const newFiles= {...files,[id]:newFile};
+      setFiles(newFiles);
+      saveFilesToStore(newFiles)
+    })
+  }
+
+  const fileUpload=()=>{
+    const newFiles=objToArr(files).reduce((result,file)=>{
+      const currentTime=new Date().getTime();
+      result[file.id]={
+        ...files[file.id],
+        isSynced:true,
+        updateAt:currentTime
+      }
+      return result
+    },{})
+    setFiles(newFiles);
+    saveFilesToStore(newFiles)
+  }
   useIpcRenderer({
     'create-new-file': createNewFile,
     'import-file': importFile,
     'save-edit-file': onSave,
-    'active-file-uploaded': activeFileUploaded
+    'active-file-uploaded': activeFileUploaded,
+    "file-downloaded":activeFileDownloaded,
+    "files-uploaded":fileUpload,
+    "loading-status":(message,flag)=>{
+      setIsLoading(flag)
+    }
   })
+
+
 
   return (
     <div className="App container-fluid px-0">
+     {isLoading && <Loader/>}
       <div className='row no-gutters'>
         <div className="col-3 bg-danger left-panel">
           <FileSearch

@@ -126,7 +126,7 @@ const menuTemplate = [
                 label: '全部同步至云端',
                 enabled: isQiniuConfiged,
                 click: () => {
-
+                    ipcMain.emit('upload-all-to-qiniu')
                 }
             },
             {

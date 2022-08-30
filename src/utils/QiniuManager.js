@@ -43,9 +43,7 @@ class QiniuManager {
             if (respErr) {
                 throw respErr;
             }
-
             if (respInfo.statusCode == 200) {
-                console.log(respBody);
                 resolve(respBody)
             } else {
                 console.log(respInfo.statusCode);
@@ -70,7 +68,7 @@ class QiniuManager {
 
     getStat(key) {
         return new Promise((resolve, reject) => {
-
+            this.bucketManager.stat(this.bucket, key, this._handleCallback(resolve, reject))
         })
     }
 
