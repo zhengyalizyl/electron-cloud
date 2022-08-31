@@ -13,6 +13,9 @@
         "@testing-library/jest-dom": "^5.16.5",
         "@testing-library/react": "^13.3.0",
         "@testing-library/user-event": "^13.5.0",
+        "@types/axios": "^0.14.0",
+        "@types/electron-store": "^3.2.0",
+        "@types/qiniu": "^7.0.1",
         "axios": "^0.27.2",
         "bootstrap": "^5.2.0",
         "classnames": "^2.3.1",
@@ -33,8 +36,75 @@
         "test": "react-scripts test",
         "eject": "react-scripts eject",
         "ele": "nodemon --exec electron .",
-        "dev": "concurrently  \"wait-on http://localhost:3000 && electron .\"  \"cross-env BROWSER=none npm start\"  "
+        "dev": "concurrently  \"wait-on http://localhost:3000 && electron .\"  \"cross-env BROWSER=none npm start\"  ",
+        "pack": "electron-builder --dir",
+        "dist": "electron-builder",
+        "prepack": "npm run build",
+        "predist": "npm run build"
     },
+    "author": {
+        "name": "zyl",
+        "email": "zyl@qq.com"
+    },
+    "homepage": "./",
+    "build": {
+        "appId": "cloudDoc",
+        "productName": "七牛云文档的学习",
+        "copyright": "Copyright 版本 2019 ${author}",
+        "files": [
+            "build/**/*",
+            "node_modules/**/*",
+            "settings/**/*",
+            "package.json",
+            "main.js",
+            "./src/menuTemplate.js",
+            "./src/AppWindow.js",
+            "./src/utils/QiniuManager.js"
+        ],
+        "directories": {
+            "buildResources": "assets"
+        },
+        "extends": null,
+        "mac": {
+            "category": "public.qpp-category.productivity",
+            "artifactName": "${productName}-${version}-${arch}.${ext}"
+        },
+        "dmg": {
+            "background": "assets/appdmg.png",
+            "icon": "assets/icon.icns",
+            "iconSize": 100,
+            "contents": [{
+                    "x": 255,
+                    "y": 85,
+                    "type": "file"
+                },
+                {
+                    "x": 253,
+                    "y": 325,
+                    "type": "link",
+                    "path": "/Applications"
+                }
+            ],
+            "window": {
+                "width": 500,
+                "height": 500
+            }
+        },
+        "win": {
+            "target": ["msi", "nsis"],
+            "icon": "assets/icon.ico",
+            "artifactName": "${productName}-Web-Setup-${version}.${ext}",
+            "publisherName": "zyl"
+        },
+        "nsis": {
+            "deleteAppDataOnUninstall": true,
+            "include": "installer/win/nsis-installer.nsh",
+            "allowToChangeInstallationDirectory": true,
+            "onclick": false,
+            "perMachine": false
+        }
+    },
+    "repository": "https://github.com/zhengyalizyl/electron-cloud.git",
     "eslintConfig": {
         "extends": [
             "react-app",
@@ -56,11 +126,13 @@
     "devDependencies": {
         "@types/concurrently": "^7.0.0",
         "@types/electron": "^1.6.10",
+        "@types/electron-builder": "^2.8.0",
         "@types/electron-is-dev": "^1.1.1",
         "@types/wait-on": "^5.3.1",
         "concurrently": "^7.3.0",
         "cross-env": "^7.0.3",
         "electron": "^20.0.1",
+        "electron-builder": "^23.3.3",
         "electron-is-dev": "^2.0.0",
         "nodemon": "^2.0.19",
         "wait-on": "^6.0.1"

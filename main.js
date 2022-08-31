@@ -36,7 +36,7 @@ app.on('ready', () => {
             height: 680,
         }
         // 初始化
-    const urlLocation = isDev ? "http://localhost:3000" : 'dummyurl';
+    const urlLocation = isDev ? "http://localhost:3000" : `file://${path.join(__dirname,'./build/index.html')}`;
     mainWindow = new AppWindow(mainWindowConfig, urlLocation)
     require('@electron/remote/main').initialize()
     require("@electron/remote/main").enable(mainWindow.webContents)

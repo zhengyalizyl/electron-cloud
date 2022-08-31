@@ -136,7 +136,7 @@ function App() {
         delete files[id]
         setFiles({ ...files });
         tabClose(id);
-        saveFilesToStore()
+        saveFilesToStore({...files})
       })
     }
 
