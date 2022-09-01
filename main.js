@@ -1,5 +1,6 @@
 const { app, BrowserWindow, Menu, ipcMain, dialog } = require('electron');
 const isDev = require('electron-is-dev')
+const { autoUpdater } = require('electron-updater')
 const { menuTemplate } = require('./src/utils/menuTemplate.js');
 const AppWindow = require('./src/AppWindow.js');
 const path = require('path');
@@ -22,15 +23,61 @@ const createManager = () => {
     return new QiniuManager(accessKey, secretKey, bucketkey)
 }
 app.on('ready', () => {
-    // mainWindow = new BrowserWindow({
-    //         width: 1024,
-    //         height: 680,
-    //         webPreferences: {
-    //             nodeIntegration: true, ////不然无法识别require和process
-    //             contextIsolation: false, //不然无法识别require和process
-    //             enableRemoteModule: true, // 这里是关键设置
-    //         }
-    //     })
+    if (isDev) {
+        // 防止报错no such file or directory dev-app-update.yml
+        autoUpdater.updateConfigPath = path.join(__dirname, "dev-app-update.yml")
+    }
+    autoUpdater.on('checking-for-update', res => {
+        console.log("获取版本信息:" + res)
+    })
+    autoUpdater.autoDownload = false;
+    // 检测是否有新版本
+    autoUpdater.checkForUpdates()
+
+    autoUpdater.on('error', (error) => {
+        dialog.showErrorBox('Error:', error == null ? "unkown" : (error))
+    })
+    autoUpdater.on('update-not-available', res => {
+        dialog.showMessageBox({
+            title: '没有新版本',
+            message: '当前已经是最新版本'
+        })
+    })
+    autoUpdater.on('update-available', res => {
+        dialog.showMessageBox({
+            type: 'info',
+            title: '软件更新',
+            message: '发现新版本, 确定更新?',
+            buttons: ['确定', '取消']
+        }).then(resp => {
+            if (resp.response == 0) {
+                createWindow()
+                autoUpdater.downloadUpdate()
+            }
+        })
+    })
+
+    autoUpdater.on('download-progress', res => {
+        console.log("下载监听:" + res);
+    })
+
+    autoUpdater.on('update-downloaded', () => {
+            dialog.showMessageBox({
+                title: '下载完成',
+                message: '最新版本已下载完成, 退出程序进行安装'
+            }).then(() => {
+                autoUpdater.quitAndInstall()
+            })
+        })
+        // mainWindow = new BrowserWindow({
+        //         width: 1024,
+        //         height: 680,
+        //         webPreferences: {
+        //             nodeIntegration: true, ////不然无法识别require和process
+        //             contextIsolation: false, //不然无法识别require和process
+        //             enableRemoteModule: true, // 这里是关键设置
+        //         }
+        //     })
     const mainWindowConfig = {
             width: 1024,
             height: 680,

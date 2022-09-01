@@ -21,6 +21,7 @@
         "classnames": "^2.3.1",
         "easymde": "^2.16.1",
         "electron-store": "^8.1.0",
+        "electron-updater": "^5.2.1",
         "node-sass": "^7.0.1",
         "qiniu": "^7.7.0",
         "react": "^18.2.0",
@@ -38,6 +39,8 @@
         "ele": "nodemon --exec electron .",
         "dev": "concurrently  \"wait-on http://localhost:3000 && electron .\"  \"cross-env BROWSER=none npm start\"  ",
         "buildMain": "webpack",
+        "release": "cross-env GH_TOKEN=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 electron-builder",
+        "prerelease": "npm run build && npm run buildMain",
         "pack": "electron-builder --dir",
         "dist": "electron-builder",
         "prepack": "npm run build",
@@ -68,7 +71,9 @@
         "directories": {
             "buildResources": "assets"
         },
-        "publish": ["github"],
+        "publish": [
+            "github"
+        ],
         "extends": null,
         "mac": {
             "category": "public.app-category.productivity",
@@ -78,7 +83,8 @@
             "background": "assets/appdmg.png",
             "icon": "assets/icon.icns",
             "iconSize": 100,
-            "contents": [{
+            "contents": [
+                {
                     "x": 255,
                     "y": 85,
                     "type": "file"
@@ -96,7 +102,10 @@
             }
         },
         "win": {
-            "target": ["msi", "nsis"],
+            "target": [
+                "msi",
+                "nsis"
+            ],
             "icon": "assets/icon.ico",
             "artifactName": "${productName}-Web-Setup-${version}.${ext}",
             "publisherName": "zyl"
@@ -105,7 +114,7 @@
             "deleteAppDataOnUninstall": true,
             "include": "installer/win/nsis-installer.nsh",
             "allowToChangeInstallationDirectory": true,
-            "onclick": false,
+            "oneClick": false,
             "perMachine": false
         }
     },
@@ -140,6 +149,7 @@
         "electron-builder": "^23.3.3",
         "electron-is-dev": "^2.0.0",
         "nodemon": "^2.0.19",
-        "wait-on": "^6.0.1"
+        "wait-on": "^6.0.1",
+        "webpack-cli": "^4.10.0"
     }
 }

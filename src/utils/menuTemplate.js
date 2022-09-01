@@ -1,5 +1,5 @@
-const { app, Menu } = require('electron')
-const { ipcMain } = require('electron/main');
+const { app, Menu, ipcMain } = require('electron')
+    // const { ipcMain } = require('electron/main');
 const Store = require('electron-store');
 const settingsStore = new Store({ name: 'Settings' })
 const isMac = process.platform === 'darwin';
