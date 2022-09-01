@@ -37,6 +37,7 @@
         "eject": "react-scripts eject",
         "ele": "nodemon --exec electron .",
         "dev": "concurrently  \"wait-on http://localhost:3000 && electron .\"  \"cross-env BROWSER=none npm start\"  ",
+        "buildMain": "webpack",
         "pack": "electron-builder --dir",
         "dist": "electron-builder",
         "prepack": "npm run build",
@@ -61,12 +62,16 @@
             "./src/AppWindow.js",
             "./src/utils/QiniuManager.js"
         ],
+        "extraMetadata": {
+            "main": "./build/main.js"
+        },
         "directories": {
             "buildResources": "assets"
         },
+        "publish": ["github"],
         "extends": null,
         "mac": {
-            "category": "public.qpp-category.productivity",
+            "category": "public.app-category.productivity",
             "artifactName": "${productName}-${version}-${arch}.${ext}"
         },
         "dmg": {
